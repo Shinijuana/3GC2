@@ -7,7 +7,6 @@
     <meta name='mobile-web-app-capable' content='yes'>
     <meta name='apple-mobile-web-app-capable' content='yes'>
     <link rel='icon' type='image/png' sizes='32x32' href='favicon-32x32.png'>
-    <link rel='icon' type='image/png' sizes='96x96' href='favicon-96x96.png'>
     <link rel='stylesheet' href='css/common.css'>
 
     <title>Immersive AR Session</title>
@@ -30,36 +29,37 @@
       import {WebXRButton} from './js/util/webxr-button.js';
       import {Scene} from './js/render/scenes/scene.js';
       import {Renderer, createWebGLContext} from './js/render/core/renderer.js';
-      import {SkyboxNode} from './js/render/nodes/skybox.js';
       import {Gltf2Node} from './js/render/nodes/gltf2.js';
       import {QueryArgs} from './js/util/query-args.js';
 
-      // If requested, use the polyfill to provide support for mobile devices
-      // and devices which only support WebVR.
+      // Polyfill support for non WebXR devices
       import WebXRPolyfill from './js/third-party/webxr-polyfill/build/webxr-polyfill.module.js';
       if (QueryArgs.getBool('usePolyfill', true)) {
         let polyfill = new WebXRPolyfill();
       }
 
-      // XR globals.
+      // XR globals
       let xrButton = null;
       let xrImmersiveRefSpace = null;
 
-      // WebGL scene globals.
+      // WebGL scene globals
       let gl = null;
       let renderer = null;
       let scene = new Scene();
       let solarSystem = new Gltf2Node({url: './assets/full.gltf'});
       
-      // Impostiamo scala e posizione per far apparire l'oggetto
-      solarSystem.scale = [10, 10, 10];  
-      solarSystem.translation = [0, 0, -2];  // Avvicina l'oggetto
-      scene.addNode(solarSystem);
-      
-      // Still adding a skybox, but only for the benefit of the inline view.
-      let skybox = new SkyboxNode({url: 'media/textures/milky-way-4k.png'});
-      scene.addNode(skybox);
+      // Log the loading of the model
+      console.log("Attempting to load GLTF model...");
 
+      // Set scale and position for the object in the AR scene
+      solarSystem.scale = [1, 1, 1];  
+      solarSystem.translation = [0, 0, -2];  // Place the object closer to the camera
+      scene.addNode(solarSystem);
+
+      // Confirm that the model was added to the scene
+      console.log("GLTF model added to scene:", solarSystem);
+
+      // Initialize WebXR session
       function initXR() {
         xrButton = new WebXRButton({
           onRequestSession: onRequestSession,
@@ -71,10 +71,9 @@
         document.querySelector('header').appendChild(xrButton.domElement);
 
         if (navigator.xr) {
-          // Checks to ensure that 'immersive-ar' mode is available, and only
-          // enables the button if so.
           navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
             xrButton.enabled = supported;
+            console.log("AR supported:", supported);
           });
 
           navigator.xr.requestSession('inline').then(onSessionStarted);
@@ -82,14 +81,11 @@
       }
 
       function onRequestSession() {
-        // Requests an 'immersive-ar' session, which ensures that the users
-        // environment will be visible either via video passthrough or a
-        // transparent display. This may be presented either in a headset or
-        // fullscreen on a mobile device.
         return navigator.xr.requestSession('immersive-ar')
             .then((session) => {
               xrButton.setSession(session);
               session.isImmersive = true;
+              console.log("Immersive AR session started");
               onSessionStarted(session);
             });
       }
@@ -98,11 +94,11 @@
         if (gl)
           return;
 
-        // WebGL context with transparent background
+        // Create WebGL context with transparent background for AR passthrough
         gl = createWebGLContext({
           xrCompatible: true,
-          alpha: true,  // Abilita trasparenza
-          premultipliedAlpha: false  // Previene errori di rendering
+          alpha: true,
+          premultipliedAlpha: false
         });
         document.body.appendChild(gl.canvas);
 
@@ -114,18 +110,14 @@
         onResize();
 
         renderer = new Renderer(gl);
-
         scene.setRenderer(renderer);
+
+        // Log that the WebGL context and renderer are initialized
+        console.log("WebGL context initialized");
       }
 
       function onSessionStarted(session) {
         session.addEventListener('end', onSessionEnded);
-
-        if (session.isImmersive) {
-          // When in 'immersive-ar' mode don't draw an opaque background because
-          // we want the real world to show through.
-          skybox.visible = false;
-        }
 
         initGL();
 
@@ -133,40 +125,48 @@
 
         let refSpaceType = session.isImmersive ? 'local' : 'viewer';
         session.requestReferenceSpace(refSpaceType).then((refSpace) => {
-          if (session.isImmersive) {
-            xrImmersiveRefSpace = refSpace;
-          }
+          xrImmersiveRefSpace = refSpace;
+          console.log("Reference space obtained:", refSpaceType);
           session.requestAnimationFrame(onXRFrame);
         });
       }
 
       function onEndSession(session) {
         session.end();
+        console.log("AR session ended");
       }
 
       function onSessionEnded(event) {
-        if (event.session.isImmersive) {
-          xrButton.setSession(null);
-          skybox.visible = true;  // Torna allo skybox quando non siamo in AR
-        }
+        xrButton.setSession(null);
+        console.log("Session ended, switching back to inline view if applicable");
       }
 
-      // Called every time a XRSession requests that a new frame be drawn.
+      // Called every time a XRSession requests that a new frame be drawn
       function onXRFrame(t, frame) {
         let session = frame.session;
         let refSpace = xrImmersiveRefSpace;
         let pose = frame.getViewerPose(refSpace);
 
-        scene.startFrame();
+        // Log the pose of the viewer
+        if (pose) {
+          console.log("Viewer pose obtained");
+        } else {
+          console.log("No viewer pose available");
+        }
 
+        scene.startFrame();
         session.requestAnimationFrame(onXRFrame);
 
-        scene.drawXRFrame(frame, pose);
+        if (pose) {
+          scene.drawXRFrame(frame, pose);
+          // Log that the frame was drawn
+          console.log("Frame drawn successfully");
+        }
 
         scene.endFrame();
       }
 
-      // Start the XR application.
+      // Start the XR application
       initXR();
     </script>
   </body>
