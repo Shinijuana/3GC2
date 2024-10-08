@@ -49,11 +49,18 @@
       let gl = null;
       let renderer = null;
       let scene = new Scene();
-      let solarSystem = new Gltf2Node({url: './assets/3G-C2.gltf'});
-      // The solar system is big (citation needed). Scale it down so that users
-      // can move around the planets more easily.
-      solarSystem.scale = [0.1, 0.1, 0.1];
-      scene.addNode(solarSystem);
+     let solarSystem = new Gltf2Node({url: './assets/3G-C2.glb'});
+
+// Load the model before adding it to the scene
+solarSystem.load().then(() => {
+    // Once the model is loaded, add it to the scene
+    scene.addNode(solarSystem);
+    // Set its scale or perform any additional setup here
+    solarSystem.scale = [0.1, 0.1, 0.1];
+}).catch(error => {
+    // Handle errors here, perhaps log them or display an error message
+    console.error("Failed to load the solar system model:", error);
+});
       // Still adding a skybox, but only for the benefit of the inline view.
       let skybox = new SkyboxNode({url: 'media/textures/milky-way-4k.png'});
       scene.addNode(skybox);
