@@ -44,7 +44,6 @@
       // XR globals.
       let xrButton = null;
       let xrImmersiveRefSpace = null;
-      let inlineViewerHelper = null;
 
       // WebGL scene globals.
       let gl = null;
@@ -52,8 +51,9 @@
       let scene = new Scene();
       let solarSystem = new Gltf2Node({url: './assets/full.gltf'});
       
-      // Ingrandiamo il modello per farlo apparire nella scena
-      solarSystem.scale = [2, 2, 2];  
+      // Impostiamo scala e posizione per far apparire l'oggetto
+      solarSystem.scale = [10, 10, 10];  
+      solarSystem.translation = [0, 0, -2];  // Avvicina l'oggetto
       scene.addNode(solarSystem);
       
       // Still adding a skybox, but only for the benefit of the inline view.
@@ -66,7 +66,7 @@
           onEndSession: onEndSession,
           textEnterXRTitle: "START AR",
           textXRNotFoundTitle: "AR NOT FOUND",
-          textExitXRTitle: "EXIT  AR",
+          textExitXRTitle: "EXIT AR",
         });
         document.querySelector('header').appendChild(xrButton.domElement);
 
@@ -98,8 +98,11 @@
         if (gl)
           return;
 
+        // WebGL context with transparent background
         gl = createWebGLContext({
-          xrCompatible: true
+          xrCompatible: true,
+          alpha: true,  // Abilita trasparenza
+          premultipliedAlpha: false  // Previene errori di rendering
         });
         document.body.appendChild(gl.canvas);
 
@@ -132,17 +135,6 @@
         session.requestReferenceSpace(refSpaceType).then((refSpace) => {
           if (session.isImmersive) {
             xrImmersiveRefSpace = refSpace;
-
-            xrImmersiveRefSpace.addEventListener('reset', (evt) => {
-              if (evt.transform) {
-                // AR experiences typically should stay grounded to the real world.
-                // If there's a known origin shift, compensate for it here.
-                xrImmersiveRefSpace = xrImmersiveRefSpace.getOffsetReferenceSpace(evt.transform);
-              }
-            });
-          } else {
-            // Rimuoviamo l'inizializzazione di InlineViewerHelper per evitare debug framerate
-            // inlineViewerHelper = new InlineViewerHelper(gl.canvas, refSpace);
           }
           session.requestAnimationFrame(onXRFrame);
         });
@@ -155,17 +147,14 @@
       function onSessionEnded(event) {
         if (event.session.isImmersive) {
           xrButton.setSession(null);
-          // Turn the background back on when we go back to the inline view.
-          skybox.visible = true;
+          skybox.visible = true;  // Torna allo skybox quando non siamo in AR
         }
       }
 
       // Called every time a XRSession requests that a new frame be drawn.
       function onXRFrame(t, frame) {
         let session = frame.session;
-        let refSpace = session.isImmersive ?
-                         xrImmersiveRefSpace :
-                         inlineViewerHelper ? inlineViewerHelper.referenceSpace : null;
+        let refSpace = xrImmersiveRefSpace;
         let pose = frame.getViewerPose(refSpace);
 
         scene.startFrame();
