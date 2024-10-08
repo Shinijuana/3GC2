@@ -31,7 +31,6 @@
       import {Scene} from './js/render/scenes/scene.js';
       import {Renderer, createWebGLContext} from './js/render/core/renderer.js';
       import {SkyboxNode} from './js/render/nodes/skybox.js';
-      import {InlineViewerHelper} from './js/util/inline-viewer-helper.js';
       import {Gltf2Node} from './js/render/nodes/gltf2.js';
       import {QueryArgs} from './js/util/query-args.js';
 
@@ -52,10 +51,11 @@
       let renderer = null;
       let scene = new Scene();
       let solarSystem = new Gltf2Node({url: './assets/full.gltf'});
-      // The solar system is big (citation needed). Scale it down so that users
-      // can move around the planets more easily.
-      solarSystem.scale = [0.1, 0.1, 0.1];
+      
+      // Ingrandiamo il modello per farlo apparire nella scena
+      solarSystem.scale = [2, 2, 2];  
       scene.addNode(solarSystem);
+      
       // Still adding a skybox, but only for the benefit of the inline view.
       let skybox = new SkyboxNode({url: 'media/textures/milky-way-4k.png'});
       scene.addNode(skybox);
@@ -141,7 +141,8 @@
               }
             });
           } else {
-            inlineViewerHelper = new InlineViewerHelper(gl.canvas, refSpace);
+            // Rimuoviamo l'inizializzazione di InlineViewerHelper per evitare debug framerate
+            // inlineViewerHelper = new InlineViewerHelper(gl.canvas, refSpace);
           }
           session.requestAnimationFrame(onXRFrame);
         });
@@ -154,7 +155,7 @@
       function onSessionEnded(event) {
         if (event.session.isImmersive) {
           xrButton.setSession(null);
-          // Turn the background back on when we go back to the inlive view.
+          // Turn the background back on when we go back to the inline view.
           skybox.visible = true;
         }
       }
@@ -164,7 +165,7 @@
         let session = frame.session;
         let refSpace = session.isImmersive ?
                          xrImmersiveRefSpace :
-                         inlineViewerHelper.referenceSpace;
+                         inlineViewerHelper ? inlineViewerHelper.referenceSpace : null;
         let pose = frame.getViewerPose(refSpace);
 
         scene.startFrame();
