@@ -46,14 +46,14 @@
       let gl = null;
       let renderer = null;
       let scene = new Scene();
-      let solarSystem = new Gltf2Node({url: './assets/full.gltf'});
-      
-      // Log the loading of the model
+      let solarSystem = new Gltf2Node({url: '/assets/full.gltf'});
+
+      // Log the loading of the model GLTF
       console.log("Attempting to load GLTF model...");
 
       // Set scale and position for the object in the AR scene
-      solarSystem.scale = [1, 1, 1];  
-      solarSystem.translation = [0, 0, -2];  // Place the object closer to the camera
+      solarSystem.scale = [10, 10, 10];
+      solarSystem.translation = [0, 0, -2]; // Place the object closer to the camera
       scene.addNode(solarSystem);
 
       // Confirm that the model was added to the scene
@@ -158,9 +158,11 @@
         session.requestAnimationFrame(onXRFrame);
 
         if (pose) {
+          // Draw the frame and log the rendering state
           scene.drawXRFrame(frame, pose);
-          // Log that the frame was drawn
           console.log("Frame drawn successfully");
+        } else {
+          console.error("Pose is not available; unable to draw frame");
         }
 
         scene.endFrame();
