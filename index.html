@@ -8,9 +8,13 @@
     <link rel='icon' type='image/png' sizes='32x32' href='favicon-32x32.png'>
     <link rel='stylesheet' href='css/common.css'>
     <title>Immersive AR Session</title>
+
+    <!-- Importa Three.js e GLTFLoader -->
     <script type="module">
       import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
       import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/loaders/GLTFLoader.js';
+
+      // Altre importazioni
       import { WebXRButton } from './js/util/webxr-button.js';
       import { Scene } from './js/render/scenes/scene.js';
       import { Renderer, createWebGLContext } from './js/render/core/renderer.js';
