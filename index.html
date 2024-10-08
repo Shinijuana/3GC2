@@ -1,5 +1,4 @@
 <!doctype html>
-
 <html>
   <head>
     <meta charset='utf-8'>
@@ -8,8 +7,9 @@
     <meta name='apple-mobile-web-app-capable' content='yes'>
     <link rel='icon' type='image/png' sizes='32x32' href='favicon-32x32.png'>
     <link rel='stylesheet' href='css/common.css'>
-
     <title>Immersive AR Session</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.rawgit.com/mrdoob/three.js/master/examples/js/loaders/GLTFLoader.js"></script>
   </head>
   <body>
     <header>
@@ -26,14 +26,13 @@
       </details>
     </header>
     <script type="module">
-      import {WebXRButton} from './js/util/webxr-button.js';
-      import {Scene} from './js/render/scenes/scene.js';
-      import {Renderer, createWebGLContext} from './js/render/core/renderer.js';
-      import {Gltf2Node} from './js/render/nodes/gltf2.js';
-      import {QueryArgs} from './js/util/query-args.js';
+      import { WebXRButton } from './js/util/webxr-button.js';
+      import { Scene } from './js/render/scenes/scene.js';
+      import { Renderer, createWebGLContext } from './js/render/core/renderer.js';
+      import { QueryArgs } from './js/util/query-args.js';
+      import WebXRPolyfill from './js/third-party/webxr-polyfill/build/webxr-polyfill.module.js';
 
       // Polyfill support for non WebXR devices
-      import WebXRPolyfill from './js/third-party/webxr-polyfill/build/webxr-polyfill.module.js';
       if (QueryArgs.getBool('usePolyfill', true)) {
         let polyfill = new WebXRPolyfill();
       }
@@ -46,18 +45,25 @@
       let gl = null;
       let renderer = null;
       let scene = new Scene();
-      let solarSystem = new Gltf2Node({url: 'https://raw.githack.com/Shinijuana/MARKERTHREE/main/assets/busto%20emilio.gltf'});
 
-      // Log the loading of the model GLTF
-      console.log("Attempting to load GLTF model...");
+      // Setup Three.js
+      const threeScene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      const threeRenderer = new THREE.WebGLRenderer({ alpha: true });
+      threeRenderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(threeRenderer.domElement);
 
-      // Set scale and position for the object in the AR scene
-      solarSystem.scale = [10, 10, 10];
-      solarSystem.translation = [0, 0, -2]; // Place the object closer to the camera
-      scene.addNode(solarSystem);
-
-      // Confirm that the model was added to the scene
-      console.log("GLTF model added to scene:", solarSystem);
+      // Load the GLB model using Three.js
+      const loader = new THREE.GLTFLoader();
+      loader.load('./assets/3G-C2.glb', (gltf) => {
+        // Set the scale and position of the model
+        gltf.scene.scale.set(10, 10, 10);
+        gltf.scene.position.set(0, 0, -2);
+        threeScene.add(gltf.scene);
+        console.log('GLTF model loaded and added to Three.js scene:', gltf);
+      }, undefined, (error) => {
+        console.error('Error loading GLTF model:', error);
+      });
 
       // Initialize WebXR session
       function initXR() {
@@ -105,6 +111,7 @@
         function onResize() {
           gl.canvas.width = gl.canvas.clientWidth * window.devicePixelRatio;
           gl.canvas.height = gl.canvas.clientHeight * window.devicePixelRatio;
+          threeRenderer.setSize(window.innerWidth, window.innerHeight); // Resize Three.js renderer
         }
         window.addEventListener('resize', onResize);
         onResize();
@@ -158,8 +165,12 @@
         session.requestAnimationFrame(onXRFrame);
 
         if (pose) {
-          // Draw the frame and log the rendering state
-         // scene.drawXRFrame(frame, pose);
+          // Update Three.js camera
+          camera.position.copy(pose.transform.position);
+          camera.rotation.copy(pose.transform.orientation);
+
+          // Render the Three.js scene
+          threeRenderer.render(threeScene, camera);
           console.log("Frame drawn successfully");
         } else {
           console.error("Pose is not available; unable to draw frame");
